@@ -1,0 +1,82 @@
+# ################ #
+# Python General #
+# ################ #
+
+# Entornos virtuales
+# Ignora las carpetas comunes de entornos virtuales para no subir las librerías
+/venv/
+/.venv/
+/env/
+/virtual/
+/.env/
+
+# Archivos de caché y bytecode de Python
+# Estos archivos se generan automáticamente al ejecutar el código
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Carpetas de distribución y construcción
+# Generadas al empaquetar el proyecto
+/dist/
+/build/
+*.egg-info/
+/sdist/
+
+
+# ############### #
+# Matlab General #
+# ############### #
+
+# Archivos de autoguardado y respaldo de Matlab
+*.asv
+*~
+
+# Archivos de proyecto de Matlab (pueden contener rutas locales)
+*.prj
+
+# Archivos de instalación de Apps de Matlab
+*.mlappinstall
+
+# Archivos binarios de datos (si no son parte esencial del repo)
+# Descomenta la línea de abajo si tus archivos .mat son resultados temporales
+# *.mat
+
+# Archivos compilados (MEX files)
+*.mex*
+
+# Carpetas generadas por Simulink y Coder
+slprj/
+codegen/
+sfprj/
+
+
+# ###################### #
+# Configuraciones de IDE #
+# ###################### #
+
+# Visual Studio Code
+.vscode/
+
+# JetBrains (PyCharm, etc.)
+.idea/
+
+
+# ################# #
+# Archivos de S.O. #
+# ################# #
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+
+# ############### #
+# Archivos Varios #
+# ############### #
+
+# Archivos de registro (logs)
+*.log
+*.tmp

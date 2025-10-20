@@ -1,13 +1,27 @@
-def membresia_triangular(x , a , b , c):
-    #Revisamos si la x está fuera de la base del triangulo, la cual corresponde [a,c]
-    if x <= a or x>= c :
-        return 0;
-    #Luego, revisamos si x está en la pendiente de subida entre [a ,b]
-    elif a < x <= b:
-        return (x - a) / (b - a)
-    # Ya al final, revisamos si x está en la pendiente de bajada  entre [b,c]
-    elif b < x < c:
-        return (c - x) / (c - b)
+def membresia_triangular(x, a, b, c):
+    """Calcula la membresía para una función triangular [a, b, c]."""
+    
+    # Caso 1: Pico es el punto inicial (rampa de bajada, como "Poca")
+    if a == b:
+        if x <= a: return 1.0
+        if x >= c: return 0.0
+        return (c - x) / (c - a) if (c - a) != 0 else 0.0
+        
+    # Caso 2: Pico es el punto final (rampa de subida, como "Mucha" o "Muy Largo")
+    if b == c:
+        if x >= c: return 1.0
+        if x <= a: return 0.0
+        return (x - a) / (c - a) if (c - a) != 0 else 0.0
+        
+    # Caso 3: Triángulo normal (como "Media")
+    if x <= a or x >= c:
+        return 0.0
+    if a < x <= b:
+        return (x - a) / (b - a) if (b - a) != 0 else 0.0
+    if b < x < c:
+        return (c - x) / (c - b) if (c - b) != 0 else 0.0
+    
+    return 0.0 
     
 def fuzzify_grado_suciedad(valor_entrada):
     

@@ -1,4 +1,5 @@
 REGLAS = [
+    # Reglas para 'No Grasosa'
     {'if': {'Tipo de Suciedad': 'No Grasosa', 'Grado de Suciedad': 'Poca', 'Cantidad de Ropa': 'Ligera'}, 'then': 'Muy Corto'},
     {'if': {'Tipo de Suciedad': 'No Grasosa', 'Grado de Suciedad': 'Poca', 'Cantidad de Ropa': 'Media'}, 'then': 'Corto'},
     {'if': {'Tipo de Suciedad': 'No Grasosa', 'Grado de Suciedad': 'Poca', 'Cantidad de Ropa': 'Pesada'}, 'then': 'Medio'},
@@ -8,6 +9,27 @@ REGLAS = [
     {'if': {'Tipo de Suciedad': 'No Grasosa', 'Grado de Suciedad': 'Mucha', 'Cantidad de Ropa': 'Ligera'}, 'then': 'Medio'},
     {'if': {'Tipo de Suciedad': 'No Grasosa', 'Grado de Suciedad': 'Mucha', 'Cantidad de Ropa': 'Media'}, 'then': 'Medio'},
     {'if': {'Tipo de Suciedad': 'No Grasosa', 'Grado de Suciedad': 'Mucha', 'Cantidad de Ropa': 'Pesada'}, 'then': 'Largo'},
+    # Reglas para 'Media'
+    {'if': {'Tipo de Suciedad': 'Media', 'Grado de Suciedad': 'Poca', 'Cantidad de Ropa': 'Ligera'}, 'then': 'Corto'},
+    {'if': {'Tipo de Suciedad': 'Media', 'Grado de Suciedad': 'Poca', 'Cantidad de Ropa': 'Media'}, 'then': 'Medio'},
+    {'if': {'Tipo de Suciedad': 'Media', 'Grado de Suciedad': 'Poca', 'Cantidad de Ropa': 'Pesada'}, 'then': 'Largo'},
+    {'if': {'Tipo de Suciedad': 'Media', 'Grado de Suciedad': 'Media', 'Cantidad de Ropa': 'Ligera'}, 'then': 'Medio'},
+    {'if': {'Tipo de Suciedad': 'Media', 'Grado de Suciedad': 'Media', 'Cantidad de Ropa': 'Media'}, 'then': 'Largo'},
+    {'if': {'Tipo de Suciedad': 'Media', 'Grado de Suciedad': 'Media', 'Cantidad de Ropa': 'Pesada'}, 'then': 'Largo'},
+    {'if': {'Tipo de Suciedad': 'Media', 'Grado de Suciedad': 'Mucha', 'Cantidad de Ropa': 'Ligera'}, 'then': 'Corto'},
+    {'if': {'Tipo de Suciedad': 'Media', 'Grado de Suciedad': 'Mucha', 'Cantidad de Ropa': 'Media'}, 'then': 'Largo'},
+    {'if': {'Tipo de Suciedad': 'Media', 'Grado de Suciedad': 'Mucha', 'Cantidad de Ropa': 'Pesada'}, 'then': 'Largo'},
+    # Reglas para 'Grasosa'
+    {'if': {'Tipo de Suciedad': 'Grasosa', 'Grado de Suciedad': 'Poca', 'Cantidad de Ropa': 'Ligera'}, 'then': 'Corto'},
+    {'if': {'Tipo de Suciedad': 'Grasosa', 'Grado de Suciedad': 'Poca', 'Cantidad de Ropa': 'Media'}, 'then': 'Medio'},
+    {'if': {'Tipo de Suciedad': 'Grasosa', 'Grado de Suciedad': 'Poca', 'Cantidad de Ropa': 'Pesada'}, 'then': 'Largo'},
+    {'if': {'Tipo de Suciedad': 'Grasosa', 'Grado de Suciedad': 'Media', 'Cantidad de Ropa': 'Ligera'}, 'then': 'Medio'},
+    {'if': {'Tipo de Suciedad': 'Grasosa', 'Grado de Suciedad': 'Media', 'Cantidad de Ropa': 'Media'}, 'then': 'Largo'},
+    {'if': {'Tipo de Suciedad': 'Grasosa', 'Grado de Suciedad': 'Media', 'Cantidad de Ropa': 'Pesada'}, 'then': 'Muy Largo'},
+    {'if': {'Tipo de Suciedad': 'Grasosa', 'Grado de Suciedad': 'Mucha', 'Cantidad de Ropa': 'Ligera'}, 'then': 'Medio'},
+    {'if': {'Tipo de Suciedad': 'Grasosa', 'Grado de Suciedad': 'Mucha', 'Cantidad de Ropa': 'Media'}, 'then': 'Largo'},
+    {'if': {'Tipo de Suciedad': 'Grasosa', 'Grado de Suciedad': 'Mucha', 'Cantidad de Ropa': 'Pesada'}, 'then': 'Muy Largo'},
+
 ]
 
 def motor_de_inferencia(valores_fuzzificados):

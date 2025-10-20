@@ -37,9 +37,20 @@ def fuzzify_grado_suciedad(valor_entrada):
     # (Pico en 100, base de 50 a 100)
     mucha  = membresia_triangular(valor_entrada,50,100,100)
     
-    #Devuelve los tres resultados en un diccionario
-    return {'poca':poca,'media':media,'mucha':mucha}
+    # Devuelve los tres resultados en un diccionario con claves que coincidan
+    return {'Poca': poca, 'Media': media, 'Mucha': mucha}
 
-print(fuzzify_grado_suciedad(75))
+def fuzzify_tipo_suciedad(valor):
+    
+    noGrasosa = membresia_triangular(valor,0,0,50)
+    media = membresia_triangular(valor,12,50,90)
+    grasosa = membresia_triangular(valor,50,100,100)
 
+    return {'No Grasosa': noGrasosa, 'Media': media, 'Grasosa': grasosa}
 
+def fuzzify_cantidad_ropa(valor):
+    ligera = membresia_triangular(valor,0,0,50)
+    media = membresia_triangular(valor,0,50,90)
+    pesada = membresia_triangular(valor,50,100,100)
+    
+    return{'Ligera':ligera,'Media':media,'Pesada':pesada}

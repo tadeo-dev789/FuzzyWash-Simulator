@@ -3,14 +3,6 @@ import math
 import random
 import time
 
-from motor_difuso.fuzzificacion import (
-    fuzzify_cantidad_ropa,
-    fuzzify_grado_suciedad,
-    fuzzify_tipo_suciedad,
-)
-from motor_difuso.defuzzificacion import defuzzify_centroide
-from motor_difuso.inferencia import motor_de_inferencia
-
 try:
     from motor_difuso.fuzzificacion import (
         fuzzify_tipo_suciedad,

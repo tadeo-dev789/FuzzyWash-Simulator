@@ -4,32 +4,135 @@ from .components.agua_burbujas import AguaBurbujas
 from .components.perilla_area_indicador import PerillaAreaIndicador
 from .components.boton import BotonNeumorphism
 from .components.display_digital import DisplayDigital
+import sys
+from os.path import expanduser
+
+# Add config directory to Python path
+sys.path.append(expanduser("~/.config/qtile"))
 
 try:
     from motor_difuso.fuzzificacion import (
         fuzzify_tipo_suciedad,
         fuzzify_grado_suciedad,
         fuzzify_cantidad_ropa,
+        membresia_triangular,  # Import membresia_triangular if needed here
     )
-    from motor_difuso.inferencia import motor_de_inferencia
-    from motor_difuso.defuzzificacion import defuzzify_centroide
+    from motor_difuso.inferencia import (
+        motor_de_inferencia,
+        REGLAS,
+    )  # Import REGLAS if needed here
+    from motor_difuso.defuzzificacion import (
+        defuzzify_centroide,
+        SALIDA_MEMBRESIA,
+    )  # Import SALIDA_MEMBRESIA if needed here
 except ImportError:
-    print("Error: No se encontraron los archivos del 'motor_difuso'.")
+    print(
+        "Error: No se encontraron los archivos del 'motor_difuso'. Usando valores por defecto."
+    )
 
+    # Fallback functions if fuzzy logic engine files are missing
+    # --- Define membresia_triangular fallback ---
+    def membresia_triangular(x: int, a: int, b: int, c: int) -> float:
+        if a == b:
+            if x <= a:
+                return 1.0
+            if x >= c:
+                return 0.0
+            return (c - x) / (c - a) if (c - a) != 0 else 0.0
+        if b == c:
+            if x >= c:
+                return 1.0
+            if x <= a:
+                return 0.0
+            return (x - a) / (c - a) if (c - a) != 0 else 0.0
+        if x <= a or x >= c:
+            return 0.0
+        if a < x <= b:
+            return (x - a) / (b - a) if (b - a) != 0 else 0.0
+        if b < x < c:
+            return (c - x) / (c - b) if (c - b) != 0 else 0.0
+        return 0.0
+
+    # --- Define REGLAS fallback ---
+    REGLAS = [
+        {
+            "if": {
+                "Tipo de Suciedad": "Media",
+                "Grado de Suciedad": "Media",
+                "Cantidad de Ropa": "Media",
+            },
+            "then": "Medio",
+        }
+    ]  # Minimal rule
+
+    # --- Define SALIDA_MEMBRESIA fallback ---
+    SALIDA_MEMBRESIA = {
+        "Muy Corto": lambda x: membresia_triangular(x, 0, 8, 23),
+        "Corto": lambda x: membresia_triangular(x, 8, 23, 38),
+        "Medio": lambda x: membresia_triangular(x, 23, 38, 53),
+        "Largo": lambda x: membresia_triangular(x, 38, 53, 60),
+        "Muy Largo": lambda x: membresia_triangular(x, 53, 60, 60),
+    }
+
+    # --- Define fuzzy/inference/defuzzify fallbacks ---
     def fuzzify_tipo_suciedad(v):
-        return {"Media": 1.0}
+        return {"Media": 1.0, "No Grasosa": 0.0, "Grasosa": 0.0}
 
     def fuzzify_grado_suciedad(v):
-        return {"Media": 1.0}
+        return {"Media": 1.0, "Poca": 0.0, "Mucha": 0.0}
 
     def fuzzify_cantidad_ropa(v):
-        return {"Media": 1.0}
+        return {"Media": 1.0, "Ligera": 0.0, "Pesada": 0.0}
 
-    def motor_de_inferencia(v):
-        return {"Medio": 1.0}
+    def motor_de_inferencia(valores_fuzzificados):
+        activacion_salidas = {
+            "Muy Corto": 0.0,
+            "Corto": 0.0,
+            "Medio": 0.0,
+            "Largo": 0.0,
+            "Muy Largo": 0.0,
+        }
+        for regla in REGLAS:
+            try:
+                fuerza = min(
+                    valores_fuzzificados["tipo"].get(
+                        regla["if"]["Tipo de Suciedad"], 0.0
+                    ),
+                    valores_fuzzificados["grado"].get(
+                        regla["if"]["Grado de Suciedad"], 0.0
+                    ),
+                    valores_fuzzificados["cantidad"].get(
+                        regla["if"]["Cantidad de Ropa"], 0.0
+                    ),
+                )
+                termino_salida = regla["then"]
+                activacion_salidas[termino_salida] = max(
+                    activacion_salidas[termino_salida], fuerza
+                )
+            except KeyError:
+                continue  # Ignore rule if keys don't match fallbacks
+        if all(
+            v == 0.0 for v in activacion_salidas.values()
+        ):  # Ensure at least one output has strength if using minimal rule
+            activacion_salidas["Medio"] = 1.0
+        return activacion_salidas
 
-    def defuzzify_centroide(v):
-        return 45.7
+    def defuzzify_centroide(activacion_salidas):
+        numerador = 0.0
+        denominador = 0.0
+        paso = 0.5
+        for x in range(int(60 / paso) + 1):
+            tiempo = x * paso
+            grado_agregado = 0.0
+            for termino, fuerza in activacion_salidas.items():
+                if termino in SALIDA_MEMBRESIA:  # Check if term exists
+                    membresia_cortada = min(fuerza, SALIDA_MEMBRESIA[termino](tiempo))
+                    grado_agregado = max(grado_agregado, membresia_cortada)
+            numerador += tiempo * grado_agregado
+            denominador += grado_agregado
+        if denominador == 0:
+            return 45.0  # Return default time if no rule fired
+        return numerador / denominador
 
 
 class FuzzyWashSimulator:
@@ -44,14 +147,15 @@ class FuzzyWashSimulator:
         self.current_time = 0.0
         self.total_time = 45.0
         self.modo_centrifugado = False
+        self.indicadores = []  # Initialize indicators list
 
         self._create_panel()
+        self.calcular()  # Calculate initial time
 
     def _create_panel(self):
         self.panel_principal = tk.Frame(self.root, bg="#E0E5EC", bd=0)
         self.panel_principal.pack(fill="both", expand=True, padx=20, pady=15)
 
-        # Título
         title_frame = tk.Frame(self.panel_principal, bg="#E0E5EC")
         title_frame.pack(pady=5)
 
@@ -73,13 +177,12 @@ class FuzzyWashSimulator:
 
         self._create_controles_superiores()
         self._create_seccion_media()
-        self._create_animaciones_con_leds()  # Ahora las animaciones y LEDs van juntos
+        self._create_animaciones_con_leds()
 
     def _create_controles_superiores(self):
         controles_frame = tk.Frame(self.panel_principal, bg="#E0E5EC")
         controles_frame.pack(fill="x", padx=15, pady=15)
 
-        # Perillas
         self.perilla_tipo_suciedad = PerillaAreaIndicador(
             controles_frame, label_text="TIPO SUCIEDAD", command=self.calcular
         )
@@ -99,7 +202,9 @@ class FuzzyWashSimulator:
         boton_container.pack(side="right", padx=15)
 
         self.boton_inicio = BotonNeumorphism(
-            boton_container, text="INICIO", command=self.toggle_inicio
+            boton_container,
+            text="INICIO",
+            command=self.toggle_inicio,
         )
         self.boton_inicio.pack(pady=3)
 
@@ -133,15 +238,12 @@ class FuzzyWashSimulator:
         self.display.pack()
 
     def _create_animaciones_con_leds(self):
-        # Frame principal para animaciones y LEDs
         animaciones_frame = tk.Frame(self.panel_principal, bg="#E0E5EC")
         animaciones_frame.pack(fill="x", padx=15, pady=10)
 
-        # Contenedor para toda la fila (LEDs + Animaciones + LEDs)
         fila_container = tk.Frame(animaciones_frame, bg="#E0E5EC")
         fila_container.pack()
 
-        # LEDs IZQUIERDOS (2 LEDs)
         leds_izquierdos_frame = tk.Frame(fila_container, bg="#E0E5EC")
         leds_izquierdos_frame.pack(side="left", padx=10)
 
@@ -150,16 +252,13 @@ class FuzzyWashSimulator:
         for i, (texto, color) in enumerate(indicadores_izquierdos):
             frame = tk.Frame(leds_izquierdos_frame, bg="#E0E5EC")
             frame.pack(pady=8)
-
             led_canvas = tk.Canvas(
                 frame, width=40, height=40, bg="#E0E5EC", highlightthickness=0
             )
             led_canvas.pack(pady=2)
-
             led_canvas.create_oval(5, 5, 35, 35, fill="#A3B1C6", outline="")
             led_canvas.create_oval(3, 3, 33, 33, fill="#FFFFFF", outline="")
             led_id = led_canvas.create_oval(8, 8, 30, 30, fill="#E74C3C", outline="")
-
             tk.Label(
                 frame,
                 text=texto,
@@ -167,22 +266,15 @@ class FuzzyWashSimulator:
                 font=("Helvetica", 9, "bold"),
                 fg="#2C3E50",
             ).pack()
-
-            # Guardar en la lista de indicadores
-            if not hasattr(self, "indicadores"):
-                self.indicadores = []
             self.indicadores.append(
                 {"canvas": led_canvas, "led_id": led_id, "text": texto, "activo": False}
             )
 
-        # ANIMACIONES (TAMBOR + AGUA) EN EL CENTRO
         animaciones_centro_frame = tk.Frame(fila_container, bg="#E0E5EC")
         animaciones_centro_frame.pack(side="left", padx=20)
 
-        # Tambor giratorio
         tambor_frame = tk.Frame(animaciones_centro_frame, bg="#E0E5EC")
         tambor_frame.pack(side="left", padx=15, pady=5)
-
         tk.Label(
             tambor_frame,
             text="TAMBOR",
@@ -190,14 +282,11 @@ class FuzzyWashSimulator:
             font=("Helvetica", 9, "bold"),
             fg="#2C3E50",
         ).pack(pady=(0, 3))
-
         self.tambor = TamborLavadora(tambor_frame, width=180, height=180)
         self.tambor.pack()
 
-        # Animación de agua y burbujas
         agua_frame = tk.Frame(animaciones_centro_frame, bg="#E0E5EC")
         agua_frame.pack(side="left", padx=15, pady=5)
-
         tk.Label(
             agua_frame,
             text="AGUA Y DETERGENTE",
@@ -205,29 +294,22 @@ class FuzzyWashSimulator:
             font=("Helvetica", 9, "bold"),
             fg="#2C3E50",
         ).pack(pady=(0, 3))
-
         self.agua = AguaBurbujas(agua_frame, width=180, height=180)
         self.agua.pack()
 
-        # LEDs DERECHOS (2 LEDs)
         leds_derechos_frame = tk.Frame(fila_container, bg="#E0E5EC")
         leds_derechos_frame.pack(side="left", padx=10)
-
         indicadores_derechos = [("CENTRIFUGADO", "#E0E5EC"), ("FINALIZADO", "#E0E5EC")]
-
         for i, (texto, color) in enumerate(indicadores_derechos):
             frame = tk.Frame(leds_derechos_frame, bg="#E0E5EC")
             frame.pack(pady=8)
-
             led_canvas = tk.Canvas(
                 frame, width=40, height=40, bg="#E0E5EC", highlightthickness=0
             )
             led_canvas.pack(pady=2)
-
             led_canvas.create_oval(5, 5, 35, 35, fill="#A3B1C6", outline="")
             led_canvas.create_oval(3, 3, 33, 33, fill="#FFFFFF", outline="")
             led_id = led_canvas.create_oval(8, 8, 30, 30, fill="#E74C3C", outline="")
-
             tk.Label(
                 frame,
                 text=texto,
@@ -235,8 +317,6 @@ class FuzzyWashSimulator:
                 font=("Helvetica", 9, "bold"),
                 fg="#2C3E50",
             ).pack()
-
-            # Guardar en la lista de indicadores
             self.indicadores.append(
                 {"canvas": led_canvas, "led_id": led_id, "text": texto, "activo": False}
             )
@@ -248,7 +328,6 @@ class FuzzyWashSimulator:
 
     def toggle_inicio(self):
         self.running = not self.running
-
         if self.running:
             self.boton_inicio.config(text="PAUSAR", fg="#E67E22")
             self.luz_indicador.itemconfig(self.luz_id, fill="#27AE60")
@@ -264,7 +343,6 @@ class FuzzyWashSimulator:
             self.tambor.iniciar_centrifugado()
         else:
             self.tambor.iniciar_lavado()
-
         self.agua.iniciar_animacion()
         self.agua.set_nivel_agua(self.perilla_tipo_suciedad.get_value())
         self._actualizar_indicadores_fase()
@@ -275,56 +353,46 @@ class FuzzyWashSimulator:
 
     def _actualizar_indicadores_fase(self):
         tiempo_restante = self.total_time - self.current_time
-
-        for indicador in self.indicadores:
-            indicador["canvas"].itemconfig(indicador["led_id"], fill="#E74C3C")
-            indicador["activo"] = False
+        fase_activa = -1  # Index of the active phase indicator
 
         if tiempo_restante > self.total_time * 0.6:
-            # LAVADO (LED 0)
-            self.indicadores[0]["canvas"].itemconfig(
-                self.indicadores[0]["led_id"], fill="#27AE60"
-            )
-            self.indicadores[0]["activo"] = True
+            fase_activa = 0  # LAVADO
             self.modo_centrifugado = False
-
         elif tiempo_restante > self.total_time * 0.3:
-            # ENJUAGUE (LED 1)
-            self.indicadores[1]["canvas"].itemconfig(
-                self.indicadores[1]["led_id"], fill="#27AE60"
-            )
-            self.indicadores[1]["activo"] = True
+            fase_activa = 1  # ENJUAGUE
             self.modo_centrifugado = False
-
         elif tiempo_restante > 0:
-            # CENTRIFUGADO (LED 2)
-            self.indicadores[2]["canvas"].itemconfig(
-                self.indicadores[2]["led_id"], fill="#27AE60"
-            )
-            self.indicadores[2]["activo"] = True
+            fase_activa = 2  # CENTRIFUGADO
             self.modo_centrifugado = True
-            if self.running:
+            # Re-trigger spin if already running in this phase
+            if self.running and not self.tambor.is_spinning_fast():
                 self.tambor.detener()
                 self.tambor.iniciar_centrifugado()
-        else:
-            # FINALIZADO (LED 3)
-            self.indicadores[3]["canvas"].itemconfig(
-                self.indicadores[3]["led_id"], fill="#27AE60"
-            )
-            self.indicadores[3]["activo"] = True
+        else:  # tiempo_restante <= 0
+            fase_activa = 3  # FINALIZADO
+            self.modo_centrifugado = False  # Ensure spin stops when finished
+
+        for idx, indicador in enumerate(self.indicadores):
+            color = "#27AE60" if idx == fase_activa else "#E74C3C"
+            indicador["canvas"].itemconfig(indicador["led_id"], fill=color)
+            indicador["activo"] = idx == fase_activa
 
     def _iniciar_conteo(self):
         if self.running and self.current_time < self.total_time:
+            # Increment time slightly faster for simulation feel if needed, here 1 sec = 1/60 min
             self.current_time += 1 / 60
             tiempo_restante = max(0, self.total_time - self.current_time)
-
             tiempo_formateado = self._formatear_tiempo(tiempo_restante)
             self.display.set_time(tiempo_formateado)
-
             self._actualizar_indicadores_fase()
-
-            self.root.after(1000, self._iniciar_conteo)
+            self.root.after(
+                1000, self._iniciar_conteo
+            )  # Call again after 1000 ms (1 second)
         elif self.current_time >= self.total_time and self.running:
+            # Ensure state consistency before calling completed
+            self.current_time = self.total_time
+            tiempo_formateado = self._formatear_tiempo(0)
+            self.display.set_time(tiempo_formateado)
             self._ciclo_completado()
 
     def _ciclo_completado(self):
@@ -334,8 +402,8 @@ class FuzzyWashSimulator:
         self.display.set_time("00:00")
         self.current_time = 0.0
         self._detener_animaciones()
-        self._actualizar_indicadores_fase()
-        self.display.set_time("¡LISTO!")
+        self._actualizar_indicadores_fase()  # Should light up FINALIZADO
+        self.display.set_time("LISTO!")
 
     def calcular(self, event=None):
         val_cantidad = self.perilla_cantidad_ropa.get_value()
@@ -353,14 +421,15 @@ class FuzzyWashSimulator:
         }
 
         activacion_salidas = motor_de_inferencia(valores_fuzzificados)
-
         tiempo_final = defuzzify_centroide(activacion_salidas)
 
-        self.total_time = tiempo_final
+        self.total_time = (
+            tiempo_final if tiempo_final > 0 else 0.1
+        )  # Ensure minimum time
         self.current_time = 0.0
 
         if not self.running:
-            tiempo_formateado = self._formatear_tiempo(tiempo_final)
+            tiempo_formateado = self._formatear_tiempo(self.total_time)
             self.display.set_time(tiempo_formateado)
 
         self.agua.set_nivel_agua(self.perilla_tipo_suciedad.get_value())
@@ -368,7 +437,7 @@ class FuzzyWashSimulator:
 
 def iniciar_app():
     root = tk.Tk()
-    FuzzyWashSimulator(root)
+    app = FuzzyWashSimulator(root)
     root.mainloop()
 
 

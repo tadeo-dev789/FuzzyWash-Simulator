@@ -1,9 +1,15 @@
 import tkinter as tk
-
-# from tkinter import ttk
 import math
 import random
 import time
+
+from motor_difuso.fuzzificacion import (
+    fuzzify_cantidad_ropa,
+    fuzzify_grado_suciedad,
+    fuzzify_tipo_suciedad,
+)
+from motor_difuso.defuzzificacion import defuzzify_centroide
+from motor_difuso.inferencia import motor_de_inferencia
 
 try:
     from motor_difuso.fuzzificacion import (
@@ -490,7 +496,7 @@ class DisplayDigital(tk.Frame):
         display_frame = tk.Frame(self, bg=self.display_bg, bd=3, relief="sunken")
         display_frame.pack(fill="both", expand=True, padx=8, pady=3)
 
-        self.display_var = tk.StringVar(value="45:00")
+        self.display_var = tk.StringVar(value="50:19")
 
         self.display_label = tk.Label(
             display_frame,
@@ -575,20 +581,20 @@ class FuzzyWashSimulator:
         controles_frame.pack(fill="x", padx=15, pady=15)
 
         # Perillas
-        self.perilla_agua = PerillaAreaIndicador(
-            controles_frame, label_text="NIVEL AGUA", command=self.calcular
-        )
-        self.perilla_agua.pack(side="left", padx=15)
-
-        self.perilla_temp = PerillaAreaIndicador(
-            controles_frame, label_text="TEMPERATURA", command=self.calcular
-        )
-        self.perilla_temp.pack(side="left", padx=15)
-
-        self.perilla_suciedad = PerillaAreaIndicador(
+        self.perilla_tipo_suciedad = PerillaAreaIndicador(
             controles_frame, label_text="TIPO SUCIEDAD", command=self.calcular
         )
-        self.perilla_suciedad.pack(side="left", padx=15)
+        self.perilla_tipo_suciedad.pack(side="left", padx=15)
+
+        self.perilla_grado_suciedad = PerillaAreaIndicador(
+            controles_frame, label_text="GRADO SUCIEDAD", command=self.calcular
+        )
+        self.perilla_grado_suciedad.pack(side="left", padx=15)
+
+        self.perilla_cantidad_ropa = PerillaAreaIndicador(
+            controles_frame, label_text="CANTIDAD ROPA", command=self.calcular
+        )
+        self.perilla_cantidad_ropa.pack(side="left", padx=15)
 
         boton_container = tk.Frame(controles_frame, bg="#E0E5EC")
         boton_container.pack(side="right", padx=15)
@@ -761,7 +767,7 @@ class FuzzyWashSimulator:
             self.tambor.iniciar_lavado()
 
         self.agua.iniciar_animacion()
-        self.agua.set_nivel_agua(self.perilla_agua.get_value())
+        self.agua.set_nivel_agua(self.perilla_tipo_suciedad.get_value())
         self._actualizar_indicadores_fase()
 
     def _detener_animaciones(self):
@@ -833,9 +839,9 @@ class FuzzyWashSimulator:
         self.display.set_time("¡LISTO!")
 
     def calcular(self, event=None):
-        val_tipo = self.perilla_suciedad.get_value()
-        val_grado = self.perilla_agua.get_value()
-        val_cantidad = self.perilla_temp.get_value()
+        val_cantidad = self.perilla_cantidad_ropa.get_value()
+        val_tipo = self.perilla_tipo_suciedad.get_value()
+        val_grado = self.perilla_grado_suciedad.get_value()
 
         fuzz_tipo = fuzzify_tipo_suciedad(val_tipo)
         fuzz_grado = fuzzify_grado_suciedad(val_grado)
@@ -858,7 +864,7 @@ class FuzzyWashSimulator:
             tiempo_formateado = self._formatear_tiempo(tiempo_final)
             self.display.set_time(tiempo_formateado)
 
-        self.agua.set_nivel_agua(self.perilla_agua.get_value())
+        self.agua.set_nivel_agua(self.perilla_tipo_suciedad.get_value())
 
 
 def iniciar_app():
